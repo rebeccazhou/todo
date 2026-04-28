@@ -1,10 +1,10 @@
 const CATEGORIES = [
   { id: "soft-services", label: "Soft Services", abbreviation: "SS" },
   { id: "idea-farm", label: "Idea Farm", abbreviation: "IF" },
+  { id: "sephora", label: "Sephora", abbreviation: "SP" },
   { id: "offhours", label: "Offhours", abbreviation: "OH" },
   { id: "personal", label: "Personal", abbreviation: "PS" },
   { id: "cooking", label: "Cooking", abbreviation: "CK" },
-  { id: "sephora", label: "Sephora", abbreviation: "SP" },
 ];
 
 const TASK_STORAGE_KEY = "personal-todos-v1";
