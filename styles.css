@@ -122,7 +122,7 @@ body:not(.auth-pending) .auth-gate {
 }
 
 .app-shell.is-rail-collapsed {
-  grid-template-columns: 108px minmax(0, 1fr);
+  grid-template-columns: 68px minmax(0, 1fr);
 }
 
 .sidebar {
@@ -276,6 +276,10 @@ body:not(.auth-pending) .auth-gate {
   padding: 120px 24px 78px 0;
 }
 
+.app-shell.is-rail-collapsed .task-pane {
+  margin-left: -28px;
+}
+
 .task-pane::-webkit-scrollbar {
   display: none;
 }
@@ -304,7 +308,7 @@ body:not(.auth-pending) .auth-gate {
 }
 
 .app-shell.is-rail-collapsed .title-block {
-  gap: 24px;
+  gap: 48px;
 }
 
 input,
@@ -527,6 +531,7 @@ select {
   .task-pane {
     height: auto;
     overflow: visible;
+    margin-left: 0;
     padding: 18px 24px 56px;
   }
 
