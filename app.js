@@ -13,6 +13,7 @@ const AUTH_STORAGE_KEY = "personal-todos-auth-v1";
 const AUTH_UNLOCKED_KEY = "personal-todos-unlocked-v1";
 const AUTH_ITERATIONS = 150000;
 const DEFAULT_ZIP = "10001";
+const MOBILE_LAYOUT_QUERY = window.matchMedia("(max-width: 760px)");
 
 const WEATHER_CODES = {
   0: { day: "Sunny", night: "Clear", color: "#dfdf6a", deep: "#c7c73b" },
@@ -311,6 +312,10 @@ function setView(view) {
 }
 
 function toggleRail() {
+  if (isMobileLayout()) {
+    return;
+  }
+
   state.preferences.collapsed = !state.preferences.collapsed;
   savePreferences();
   render();
@@ -323,12 +328,19 @@ function toggleTheme() {
 }
 
 function applyPreferences() {
+  const railCollapsed = state.preferences.collapsed && !isMobileLayout();
+
   elements.root.dataset.theme = state.preferences.theme;
-  elements.shell.classList.toggle("is-rail-collapsed", state.preferences.collapsed);
+  elements.shell.classList.toggle("is-rail-collapsed", railCollapsed);
+  elements.railToggle.disabled = isMobileLayout();
   elements.railToggle.setAttribute(
     "aria-label",
-    state.preferences.collapsed ? "Expand categories" : "Collapse categories",
+    railCollapsed ? "Expand categories" : "Collapse categories",
   );
+}
+
+function isMobileLayout() {
+  return MOBILE_LAYOUT_QUERY.matches;
 }
 
 function renderTabs() {
@@ -850,6 +862,7 @@ function initializeApp() {
   elements.themeToggle.addEventListener("click", toggleTheme);
   elements.weatherStamp.addEventListener("click", toggleZipForm);
   elements.zipForm.addEventListener("submit", saveZip);
+  MOBILE_LAYOUT_QUERY.addEventListener("change", applyPreferences);
   elements.zipInput.addEventListener("blur", (event) => {
     if (!elements.zipForm.hidden) {
       saveZip(event);

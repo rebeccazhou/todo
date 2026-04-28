@@ -9,6 +9,10 @@
   --field: rgba(0, 0, 0, 0.04);
   --weather-accent: #dfdf6a;
   --weather-accent-deep: #c7c73b;
+  --app-font-size: 30px;
+  --count-font-size: 19px;
+  --tab-count-font-size: 19.35px;
+  --field-height: 38px;
 }
 
 :root[data-theme="dark"] {
@@ -76,11 +80,11 @@ body:not(.auth-pending) .auth-gate {
 
 .auth-form input {
   width: 326px;
-  height: 38px;
+  height: var(--field-height);
   border: 0;
   background: transparent;
   color: var(--text);
-  font-size: 30px;
+  font-size: var(--app-font-size);
   line-height: 1.2;
   outline: none;
   padding: 0;
@@ -92,7 +96,7 @@ body:not(.auth-pending) .auth-gate {
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  font-size: 30px;
+  font-size: var(--app-font-size);
   line-height: 1.2;
   padding: 0;
   text-align: left;
@@ -106,7 +110,7 @@ body:not(.auth-pending) .auth-gate {
 
 .auth-message {
   color: var(--muted);
-  font-size: 30px;
+  font-size: var(--app-font-size);
   line-height: 1.2;
 }
 
@@ -211,8 +215,8 @@ body:not(.auth-pending) .auth-gate {
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  font-size: 30px;
-  line-height: 30px;
+  font-size: var(--app-font-size);
+  line-height: var(--app-font-size);
   letter-spacing: 0;
   padding: 0;
   text-align: left;
@@ -224,7 +228,7 @@ body:not(.auth-pending) .auth-gate {
 }
 
 .view-tab-count {
-  font-size: 19.35px;
+  font-size: var(--tab-count-font-size);
   line-height: 1;
 }
 
@@ -242,7 +246,7 @@ body:not(.auth-pending) .auth-gate {
   background: transparent;
   color: var(--text);
   cursor: pointer;
-  font-size: 30px;
+  font-size: var(--app-font-size);
   line-height: 1.2;
   letter-spacing: 0;
   padding: 0;
@@ -265,7 +269,7 @@ body:not(.auth-pending) .auth-gate {
 
 .zip-form span {
   color: var(--muted);
-  font-size: 30px;
+  font-size: var(--app-font-size);
   line-height: 1.2;
 }
 
@@ -294,7 +298,7 @@ body:not(.auth-pending) .auth-gate {
   display: grid;
   gap: 8px;
   color: var(--text);
-  font-size: 30px;
+  font-size: var(--app-font-size);
   line-height: 1;
   letter-spacing: 0;
   padding: 0;
@@ -316,12 +320,12 @@ body:not(.auth-pending) .auth-gate {
 input,
 select,
 .zip-form input {
-  height: 38px;
+  height: var(--field-height);
   border: 0;
   border-radius: 0;
   background: transparent;
   color: var(--text);
-  font-size: 30px;
+  font-size: var(--app-font-size);
   line-height: 1.2;
   padding: 0;
 }
@@ -365,7 +369,7 @@ select {
   gap: 8px;
   min-height: 36px;
   color: var(--text);
-  font-size: 30px;
+  font-size: var(--app-font-size);
   line-height: 1;
 }
 
@@ -374,7 +378,7 @@ select {
 }
 
 .section-count {
-  font-size: 19px;
+  font-size: var(--count-font-size);
 }
 
 .task-list {
@@ -439,13 +443,13 @@ select {
 
 .task-title {
   width: 408px;
-  min-height: 38px;
+  min-height: var(--field-height);
   margin: -4px 0 0;
   border: 0;
   background: transparent;
   overflow-wrap: anywhere;
   color: inherit;
-  font-size: 30px;
+  font-size: var(--app-font-size);
   font-weight: 400;
   line-height: 1.2;
   letter-spacing: 0;
@@ -471,12 +475,12 @@ select {
 
 .draft-input {
   width: 408px;
-  min-height: 38px;
+  min-height: var(--field-height);
   margin: -4px 0 0;
   border: 0;
   background: transparent;
   color: var(--text);
-  font-size: 30px;
+  font-size: var(--app-font-size);
   font-weight: 400;
   line-height: 1.2;
   letter-spacing: 0;
@@ -491,6 +495,13 @@ select {
 }
 
 @media (max-width: 760px) {
+  :root {
+    --app-font-size: 24px;
+    --count-font-size: 15.2px;
+    --tab-count-font-size: 15.5px;
+    --field-height: 31px;
+  }
+
   .auth-gate {
     padding: 120px 24px 0;
   }
@@ -517,6 +528,16 @@ select {
     padding: 24px 24px 0;
   }
 
+  .weather-dot:disabled {
+    cursor: default;
+    opacity: 1;
+  }
+
+  .weather-dot:disabled:hover,
+  .app-shell.is-rail-collapsed .weather-dot {
+    background: var(--weather-accent);
+  }
+
   .view-tabs,
   .app-shell.is-rail-collapsed .view-tabs {
     display: grid;
@@ -537,8 +558,13 @@ select {
     padding: 18px 24px 56px;
   }
 
-  .view-context {
-    display: block;
+  .view-context,
+  .app-shell.is-rail-collapsed .view-context:not(:empty) {
+    display: none;
+  }
+
+  .app-shell.is-rail-collapsed .title-block {
+    gap: 8px;
   }
 
   .task {
