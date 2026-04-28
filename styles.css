@@ -422,7 +422,7 @@ select {
 
 .task-title {
   width: 326px;
-  min-height: 36px;
+  min-height: 38px;
   margin: -4px 0 0;
   border: 0;
   background: transparent;
@@ -454,8 +454,7 @@ select {
 
 .draft-input {
   width: 326px;
-  min-height: 36px;
-  max-height: 180px;
+  min-height: 38px;
   margin: -4px 0 0;
   border: 0;
   background: transparent;

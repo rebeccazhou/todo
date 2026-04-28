@@ -365,7 +365,6 @@ function renderTask(task, options = {}) {
   checkbox.checked = task.completed;
   title.value = task.text;
   title.dataset.taskId = task.id;
-  resizeTextArea(title);
 
   node.addEventListener("dragstart", (event) => {
     if (task.completed) {
@@ -401,12 +400,13 @@ function renderTask(task, options = {}) {
     }
   });
 
+  requestAnimationFrame(() => resizeTextArea(title));
   return node;
 }
 
 function resizeTextArea(input) {
-  input.style.height = "0px";
-  input.style.height = `${input.scrollHeight}px`;
+  input.style.height = "auto";
+  input.style.height = `${input.scrollHeight + 2}px`;
 }
 
 function renderDraftTask(period) {
