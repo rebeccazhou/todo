@@ -303,6 +303,10 @@ body:not(.auth-pending) .auth-gate {
   display: block;
 }
 
+.app-shell.is-rail-collapsed .title-block {
+  gap: 24px;
+}
+
 input,
 select,
 .zip-form input {
