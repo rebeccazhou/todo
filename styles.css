@@ -126,6 +126,8 @@ body:not(.auth-pending) .auth-gate {
 }
 
 .sidebar {
+  position: relative;
+  z-index: 2;
   display: grid;
   grid-template-rows: auto 1fr auto;
   height: 100vh;
