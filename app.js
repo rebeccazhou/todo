@@ -7,13 +7,14 @@ const CATEGORIES = [
   { id: "cooking", label: "Cooking", abbreviation: "CK" },
 ];
 
+const SUPABASE_URL = "https://ippikfbtknoddvumwgil.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Gb7Nd34Ndh0wQxOK2BuKmw_1WZUrAX2";
 const TASK_STORAGE_KEY = "personal-todos-v1";
 const PREF_STORAGE_KEY = "personal-todos-preferences-v1";
-const AUTH_STORAGE_KEY = "personal-todos-auth-v1";
-const AUTH_UNLOCKED_KEY = "personal-todos-unlocked-v1";
-const AUTH_ITERATIONS = 150000;
+const LOGIN_EMAIL_STORAGE_KEY = "personal-todos-login-email-v1";
 const DEFAULT_ZIP = "10001";
 const MOBILE_LAYOUT_QUERY = window.matchMedia("(max-width: 760px)");
+const supabaseClient = globalThis.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) ?? null;
 
 const WEATHER_CODES = {
   0: { day: "Sunny", night: "Clear", color: "#dfdf6a", deep: "#c7c73b" },
@@ -50,6 +51,9 @@ const state = {
   view: "soft-services",
   tasks: loadTasks(),
   preferences: loadPreferences(),
+  user: null,
+  syncTimer: null,
+  isSyncing: false,
   focusDraftPeriod: null,
   focusTaskId: null,
   weather: {
@@ -63,6 +67,7 @@ const elements = {
   root: document.documentElement,
   authForm: document.querySelector("#authForm"),
   authTitle: document.querySelector("#authTitle"),
+  authEmail: document.querySelector("#authEmail"),
   authPassword: document.querySelector("#authPassword"),
   authSubmit: document.querySelector("#authSubmit"),
   authMessage: document.querySelector("#authMessage"),
@@ -89,7 +94,7 @@ function loadTasks() {
   }
 }
 
-function normalizeTask(task) {
+function normalizeTask(task, index = 0) {
   return {
     id: task.id ?? generateId(),
     text: task.text ?? "",
@@ -98,6 +103,7 @@ function normalizeTask(task) {
     completed: Boolean(task.completed),
     completedAt: task.completedAt ?? null,
     createdAt: task.createdAt ?? new Date().toISOString(),
+    sortOrder: Number.isFinite(task.sortOrder) ? task.sortOrder : index,
   };
 }
 
@@ -109,21 +115,29 @@ function loadPreferences() {
   };
 
   try {
-    return {
-      ...fallback,
-      ...JSON.parse(localStorage.getItem(PREF_STORAGE_KEY)),
-    };
+    return normalizePreferences(JSON.parse(localStorage.getItem(PREF_STORAGE_KEY)));
   } catch {
     return fallback;
   }
 }
 
+function normalizePreferences(preferences) {
+  return {
+    collapsed: Boolean(preferences?.collapsed),
+    theme: preferences?.theme === "dark" ? "dark" : "light",
+    zip: preferences?.zip || DEFAULT_ZIP,
+  };
+}
+
 function saveTasks() {
+  state.tasks = state.tasks.map((task, index) => ({ ...task, sortOrder: index }));
   localStorage.setItem(TASK_STORAGE_KEY, JSON.stringify(state.tasks));
+  queueRemoteSave();
 }
 
 function savePreferences() {
   localStorage.setItem(PREF_STORAGE_KEY, JSON.stringify(state.preferences));
+  saveRemotePreferences();
 }
 
 function generateId() {
@@ -155,6 +169,7 @@ function createTask(text, category, period) {
     completed: false,
     completedAt: null,
     createdAt: new Date().toISOString(),
+    sortOrder: state.tasks.length,
   };
 }
 
@@ -164,6 +179,181 @@ function createTasksFromText(text, category, period) {
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => createTask(line, category, period));
+}
+
+function taskFromDatabase(row) {
+  return normalizeTask(
+    {
+      id: row.id,
+      text: row.text,
+      category: row.category,
+      period: row.period,
+      completed: row.completed,
+      completedAt: row.completed_at,
+      createdAt: row.created_at,
+      sortOrder: row.sort_order,
+    },
+    row.sort_order,
+  );
+}
+
+function taskToDatabase(task, index) {
+  return {
+    id: task.id,
+    user_id: state.user.id,
+    text: task.text,
+    category: task.category,
+    period: task.period,
+    completed: task.completed,
+    completed_at: task.completedAt,
+    created_at: task.createdAt,
+    sort_order: index,
+  };
+}
+
+function preferencesFromDatabase(row) {
+  return normalizePreferences({
+    collapsed: row.collapsed,
+    theme: row.theme,
+    zip: row.zip,
+  });
+}
+
+function preferencesToDatabase() {
+  return {
+    user_id: state.user.id,
+    collapsed: state.preferences.collapsed,
+    theme: state.preferences.theme,
+    zip: state.preferences.zip,
+  };
+}
+
+function queueRemoteSave() {
+  if (!supabaseClient || !state.user) {
+    return;
+  }
+
+  clearTimeout(state.syncTimer);
+  state.syncTimer = setTimeout(() => {
+    state.syncTimer = null;
+    flushRemoteTasks();
+  }, 350);
+}
+
+async function flushRemoteTasks({ force = false } = {}) {
+  if (!supabaseClient || !state.user) {
+    return;
+  }
+
+  if (state.isSyncing && !force) {
+    queueRemoteSave();
+    return;
+  }
+
+  const rows = state.tasks.map(taskToDatabase);
+  const ids = rows.map((task) => task.id);
+  const idFilter = ids.map((id) => `"${id}"`).join(",");
+
+  try {
+    if (rows.length > 0) {
+      const { error } = await supabaseClient.from("todos").upsert(rows, { onConflict: "id" });
+      if (error) {
+        throw error;
+      }
+    }
+
+    let deleteQuery = supabaseClient.from("todos").delete().eq("user_id", state.user.id);
+    deleteQuery = ids.length > 0
+      ? deleteQuery.not("id", "in", `(${idFilter})`)
+      : deleteQuery.neq("id", "00000000-0000-0000-0000-000000000000");
+
+    const { error: deleteError } = await deleteQuery;
+    if (deleteError) {
+      throw deleteError;
+    }
+  } catch (error) {
+    console.warn("Could not sync todos", error);
+  }
+}
+
+async function saveRemotePreferences() {
+  if (!supabaseClient || !state.user) {
+    return;
+  }
+
+  try {
+    const { error } = await supabaseClient
+      .from("preferences")
+      .upsert(preferencesToDatabase(), { onConflict: "user_id" });
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.warn("Could not sync preferences", error);
+  }
+}
+
+async function syncFromRemote() {
+  if (!supabaseClient || !state.user || state.isSyncing) {
+    return;
+  }
+
+  state.isSyncing = true;
+
+  try {
+    if (state.syncTimer) {
+      clearTimeout(state.syncTimer);
+      state.syncTimer = null;
+      await flushRemoteTasks({ force: true });
+    }
+
+    const [{ data: remoteTasks, error: taskError }, { data: remotePreferences, error: preferenceError }] =
+      await Promise.all([
+        supabaseClient
+          .from("todos")
+          .select("*")
+          .order("sort_order", { ascending: true })
+          .order("created_at", { ascending: true }),
+        supabaseClient
+          .from("preferences")
+          .select("*")
+          .eq("user_id", state.user.id)
+          .maybeSingle(),
+      ]);
+
+    if (taskError) {
+      throw taskError;
+    }
+
+    if (preferenceError) {
+      throw preferenceError;
+    }
+
+    const tasks = remoteTasks ?? [];
+
+    if (tasks.length > 0 || state.tasks.length === 0) {
+      state.tasks = tasks.map(taskFromDatabase);
+      localStorage.setItem(TASK_STORAGE_KEY, JSON.stringify(state.tasks));
+    } else {
+      await flushRemoteTasks({ force: true });
+    }
+
+    if (remotePreferences) {
+      state.preferences = preferencesFromDatabase(remotePreferences);
+      localStorage.setItem(PREF_STORAGE_KEY, JSON.stringify(state.preferences));
+    } else {
+      await saveRemotePreferences();
+    }
+
+    render();
+    fetchWeather();
+  } catch (error) {
+    console.warn("Could not load Supabase data", error);
+    render();
+  } finally {
+    state.isSyncing = false;
+  }
 }
 
 function startOfThisWeek() {
@@ -752,73 +942,29 @@ function saveZip(event) {
   fetchWeather();
 }
 
-function bytesToBase64(bytes) {
-  return btoa(String.fromCharCode(...new Uint8Array(bytes)));
-}
-
-function base64ToBytes(value) {
-  return Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
-}
-
-async function derivePasswordHash(password, salt) {
-  const passwordKey = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(password),
-    "PBKDF2",
-    false,
-    ["deriveBits"],
-  );
-  const bits = await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      hash: "SHA-256",
-      salt,
-      iterations: AUTH_ITERATIONS,
-    },
-    passwordKey,
-    256,
-  );
-
-  return bytesToBase64(bits);
-}
-
-async function createAuthRecord(password) {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  return {
-    salt: bytesToBase64(salt),
-    hash: await derivePasswordHash(password, salt),
-    iterations: AUTH_ITERATIONS,
-  };
-}
-
-async function verifyPassword(password, record) {
-  const hash = await derivePasswordHash(password, base64ToBytes(record.salt));
-  return hash === record.hash;
-}
-
-function getAuthRecord() {
-  try {
-    return JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY));
-  } catch {
-    return null;
-  }
-}
-
 function setAuthMode() {
-  const hasPassword = Boolean(getAuthRecord());
-  elements.authTitle.textContent = hasPassword ? "Password" : "Set password";
-  elements.authSubmit.textContent = hasPassword ? "Unlock" : "Save";
-  elements.authPassword.autocomplete = hasPassword ? "current-password" : "new-password";
+  elements.authTitle.textContent = "Login";
+  elements.authSubmit.textContent = "Unlock";
+  elements.authEmail.value = localStorage.getItem(LOGIN_EMAIL_STORAGE_KEY) ?? "";
+  elements.authPassword.autocomplete = "current-password";
 }
 
 function unlockApp() {
   document.body.classList.remove("auth-pending");
   initializeApp();
+  syncFromRemote();
 }
 
 async function handleAuthSubmit(event) {
   event.preventDefault();
+  const email = elements.authEmail.value.trim();
   const password = elements.authPassword.value;
+
+  if (!email) {
+    elements.authMessage.textContent = "Enter email";
+    elements.authEmail.focus();
+    return;
+  }
 
   if (!password) {
     elements.authMessage.textContent = "Enter a password";
@@ -826,27 +972,35 @@ async function handleAuthSubmit(event) {
     return;
   }
 
+  if (!supabaseClient) {
+    elements.authMessage.textContent = "Could not load Supabase";
+    return;
+  }
+
+  elements.authMessage.textContent = "";
+  elements.authSubmit.disabled = true;
+
   try {
-    const record = getAuthRecord();
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
-    if (!record) {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(await createAuthRecord(password)));
-      localStorage.setItem(AUTH_UNLOCKED_KEY, "true");
+    if (error) {
+      throw error;
+    }
+
+    if (data.user) {
+      state.user = data.user;
+      localStorage.setItem(LOGIN_EMAIL_STORAGE_KEY, email);
       unlockApp();
       return;
     }
 
-    if (await verifyPassword(password, record)) {
-      localStorage.setItem(AUTH_UNLOCKED_KEY, "true");
-      unlockApp();
-      return;
-    }
-
-    elements.authMessage.textContent = "Try again";
+    throw new Error("No user returned");
+  } catch {
+    elements.authMessage.textContent = "Check email/password";
     elements.authPassword.value = "";
     elements.authPassword.focus();
-  } catch {
-    elements.authMessage.textContent = "Password protection needs this browser's crypto support";
+  } finally {
+    elements.authSubmit.disabled = false;
   }
 }
 
@@ -884,21 +1038,34 @@ function initializeApp() {
     }
   });
 
+  window.addEventListener("focus", syncFromRemote);
   render();
   fetchWeather();
 }
 
-function initializeAuth() {
+async function initializeAuth() {
   elements.root.dataset.theme = state.preferences.theme;
 
-  if (localStorage.getItem(AUTH_UNLOCKED_KEY) === "true" && getAuthRecord()) {
+  if (!supabaseClient) {
+    setAuthMode();
+    elements.authMessage.textContent = "Could not load Supabase";
+    return;
+  }
+
+  const { data } = await supabaseClient.auth.getSession();
+  if (data.session?.user) {
+    state.user = data.session.user;
     unlockApp();
     return;
   }
 
   setAuthMode();
   elements.authForm.addEventListener("submit", handleAuthSubmit);
-  elements.authPassword.focus();
+  if (elements.authEmail.value) {
+    elements.authPassword.focus();
+  } else {
+    elements.authEmail.focus();
+  }
 }
 
 initializeAuth();

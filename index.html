@@ -9,7 +9,13 @@
   <body class="auth-pending">
     <section id="authGate" class="auth-gate" aria-live="polite">
       <form id="authForm" class="auth-form">
-        <p id="authTitle">Password</p>
+        <p id="authTitle">Login</p>
+        <input
+          id="authEmail"
+          type="email"
+          autocomplete="email"
+          aria-label="Email"
+        />
         <input
           id="authPassword"
           type="password"
@@ -69,6 +75,7 @@
       </article>
     </template>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
   </body>
 </html>
