@@ -11,10 +11,13 @@ const SUPABASE_URL = "https://ippikfbtknoddvumwgil.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Gb7Nd34Ndh0wQxOK2BuKmw_1WZUrAX2";
 const TASK_STORAGE_KEY = "personal-todos-v1";
 const PREF_STORAGE_KEY = "personal-todos-preferences-v1";
-const LOGIN_EMAIL_STORAGE_KEY = "personal-todos-login-email-v1";
+const LOGIN_NAME_STORAGE_KEY = "personal-todos-login-name-v1";
 const DEFAULT_ZIP = "10001";
 const MOBILE_LAYOUT_QUERY = window.matchMedia("(max-width: 760px)");
 const supabaseClient = globalThis.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) ?? null;
+const USERNAME_EMAIL_MAP = {
+  rz: "rebecca.p.zhou@gmail.com",
+};
 
 const WEATHER_CODES = {
   0: { day: "Sunny", night: "Clear", color: "#dfdf6a", deep: "#c7c73b" },
@@ -67,7 +70,7 @@ const elements = {
   root: document.documentElement,
   authForm: document.querySelector("#authForm"),
   authTitle: document.querySelector("#authTitle"),
-  authEmail: document.querySelector("#authEmail"),
+  authLogin: document.querySelector("#authLogin"),
   authPassword: document.querySelector("#authPassword"),
   authSubmit: document.querySelector("#authSubmit"),
   authMessage: document.querySelector("#authMessage"),
@@ -945,8 +948,13 @@ function saveZip(event) {
 function setAuthMode() {
   elements.authTitle.textContent = "Login";
   elements.authSubmit.textContent = "Unlock";
-  elements.authEmail.value = localStorage.getItem(LOGIN_EMAIL_STORAGE_KEY) ?? "";
+  elements.authLogin.value = localStorage.getItem(LOGIN_NAME_STORAGE_KEY) ?? "";
   elements.authPassword.autocomplete = "current-password";
+}
+
+function getEmailForLogin(login) {
+  const normalizedLogin = login.trim().toLowerCase();
+  return USERNAME_EMAIL_MAP[normalizedLogin] ?? login;
 }
 
 function unlockApp() {
@@ -957,12 +965,13 @@ function unlockApp() {
 
 async function handleAuthSubmit(event) {
   event.preventDefault();
-  const email = elements.authEmail.value.trim();
+  const login = elements.authLogin.value.trim();
+  const email = getEmailForLogin(login);
   const password = elements.authPassword.value;
 
-  if (!email) {
-    elements.authMessage.textContent = "Enter email";
-    elements.authEmail.focus();
+  if (!login) {
+    elements.authMessage.textContent = "Enter username";
+    elements.authLogin.focus();
     return;
   }
 
@@ -989,14 +998,14 @@ async function handleAuthSubmit(event) {
 
     if (data.user) {
       state.user = data.user;
-      localStorage.setItem(LOGIN_EMAIL_STORAGE_KEY, email);
+      localStorage.setItem(LOGIN_NAME_STORAGE_KEY, login);
       unlockApp();
       return;
     }
 
     throw new Error("No user returned");
   } catch {
-    elements.authMessage.textContent = "Check email/password";
+    elements.authMessage.textContent = "Check username/password";
     elements.authPassword.value = "";
     elements.authPassword.focus();
   } finally {
@@ -1061,10 +1070,10 @@ async function initializeAuth() {
 
   setAuthMode();
   elements.authForm.addEventListener("submit", handleAuthSubmit);
-  if (elements.authEmail.value) {
+  if (elements.authLogin.value) {
     elements.authPassword.focus();
   } else {
-    elements.authEmail.focus();
+    elements.authLogin.focus();
   }
 }
 

@@ -7,7 +7,7 @@ A minimal personal checklist app with category tabs, this-week and later section
 1. Open the Supabase SQL Editor.
 2. Run `supabase/schema.sql`.
 3. In Authentication > Users, create one user for this app and set its password.
-4. Open the app and sign in with that email/password.
+4. Open the app and sign in with username `rz` and that password.
 
 The Supabase publishable key is safe to ship in the browser. Row Level Security in `supabase/schema.sql` keeps each signed-in user's rows private.
 
