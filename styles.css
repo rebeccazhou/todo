@@ -163,8 +163,8 @@ body:not(.auth-pending) .auth-gate {
   top: 0;
   right: 0;
   z-index: 10;
-  width: 30px;
-  height: 30px;
+  width: 100px;
+  height: 100px;
   border: 0;
   border-radius: 0;
   background: transparent;
