@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Personal To Do List</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar">
+        <button id="railToggle" class="weather-dot" type="button" aria-label="Collapse categories"></button>
+
+        <nav id="viewTabs" class="view-tabs" aria-label="Todo views"></nav>
+
+        <div class="weather-wrap">
+          <button id="weatherStamp" class="weather-stamp" type="button"></button>
+          <form id="zipForm" class="zip-form" hidden>
+            <span>ZIP</span>
+            <input id="zipInput" inputmode="numeric" maxlength="10" autocomplete="postal-code" />
+          </form>
+        </div>
+      </aside>
+
+      <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle dark mode"></button>
+
+      <section class="task-pane" aria-live="polite">
+        <header class="pane-header">
+          <div class="title-block">
+            <span id="viewContext" class="view-context"></span>
+            <span id="viewTitle">This Week</span>
+          </div>
+        </header>
+
+        <div id="content" class="content"></div>
+      </section>
+    </main>
+
+    <template id="taskTemplate">
+      <article class="task">
+        <label class="task-check">
+          <input type="checkbox" />
+          <span class="checkmark" aria-hidden="true"></span>
+        </label>
+        <textarea class="task-title" rows="1" aria-label="Todo"></textarea>
+      </article>
+    </template>
+
+    <template id="draftTemplate">
+      <article class="task task-draft">
+        <span class="task-check" aria-hidden="true">
+          <span class="checkmark"></span>
+        </span>
+        <textarea class="draft-input" rows="1" aria-label="New todo"></textarea>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
