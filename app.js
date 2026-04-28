@@ -509,11 +509,11 @@ function renderSection(title, tasks, options = {}) {
     ),
   );
 
+  options.tailTasks?.forEach((task) => list.append(renderTask(task, { dim: true, draggable: false })));
+
   if (options.addable) {
     list.append(renderDraftTask(options.period));
   }
-
-  options.tailTasks?.forEach((task) => list.append(renderTask(task, { dim: true, draggable: false })));
 
   section.append(list);
 
