@@ -45,6 +45,71 @@ button {
   color: inherit;
 }
 
+.auth-pending .app-shell {
+  visibility: hidden;
+}
+
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: start;
+  background: var(--bg);
+  color: var(--text);
+  padding: 120px 0 0 308px;
+}
+
+body:not(.auth-pending) .auth-gate {
+  display: none;
+}
+
+.auth-form {
+  display: grid;
+  gap: 30px;
+  width: 326px;
+}
+
+.auth-form p {
+  margin: 0;
+}
+
+.auth-form input {
+  width: 326px;
+  height: 38px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 30px;
+  line-height: 1.2;
+  outline: none;
+  padding: 0;
+}
+
+.auth-form button {
+  width: fit-content;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 30px;
+  line-height: 1.2;
+  padding: 0;
+  text-align: left;
+}
+
+.auth-form button:hover,
+.auth-form button:focus-visible {
+  color: var(--text);
+  outline: none;
+}
+
+.auth-message {
+  color: var(--muted);
+  font-size: 30px;
+  line-height: 1.2;
+}
+
 .app-shell {
   position: relative;
   display: grid;
@@ -410,6 +475,15 @@ select {
 }
 
 @media (max-width: 760px) {
+  .auth-gate {
+    padding: 120px 24px 0;
+  }
+
+  .auth-form,
+  .auth-form input {
+    width: min(326px, 100%);
+  }
+
   .app-shell,
   .app-shell.is-rail-collapsed {
     grid-template-columns: 1fr;

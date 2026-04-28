@@ -6,7 +6,21 @@
     <title>Personal To Do List</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body>
+  <body class="auth-pending">
+    <section id="authGate" class="auth-gate" aria-live="polite">
+      <form id="authForm" class="auth-form">
+        <p id="authTitle">Password</p>
+        <input
+          id="authPassword"
+          type="password"
+          autocomplete="current-password"
+          aria-label="Password"
+        />
+        <button id="authSubmit" type="submit">Unlock</button>
+        <p id="authMessage" class="auth-message"></p>
+      </form>
+    </section>
+
     <main class="app-shell">
       <aside class="sidebar">
         <button id="railToggle" class="weather-dot" type="button" aria-label="Collapse categories"></button>

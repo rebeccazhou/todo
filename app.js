@@ -8,6 +8,9 @@ const CATEGORIES = [
 
 const TASK_STORAGE_KEY = "personal-todos-v1";
 const PREF_STORAGE_KEY = "personal-todos-preferences-v1";
+const AUTH_STORAGE_KEY = "personal-todos-auth-v1";
+const AUTH_UNLOCKED_KEY = "personal-todos-unlocked-v1";
+const AUTH_ITERATIONS = 150000;
 const DEFAULT_ZIP = "10001";
 
 const WEATHER_CODES = {
@@ -56,6 +59,11 @@ const state = {
 
 const elements = {
   root: document.documentElement,
+  authForm: document.querySelector("#authForm"),
+  authTitle: document.querySelector("#authTitle"),
+  authPassword: document.querySelector("#authPassword"),
+  authSubmit: document.querySelector("#authSubmit"),
+  authMessage: document.querySelector("#authMessage"),
   shell: document.querySelector(".app-shell"),
   viewTitle: document.querySelector("#viewTitle"),
   viewContext: document.querySelector("#viewContext"),
@@ -708,30 +716,152 @@ function saveZip(event) {
   fetchWeather();
 }
 
-elements.railToggle.addEventListener("click", toggleRail);
-elements.themeToggle.addEventListener("click", toggleTheme);
-elements.weatherStamp.addEventListener("click", toggleZipForm);
-elements.zipForm.addEventListener("submit", saveZip);
-elements.zipInput.addEventListener("blur", (event) => {
-  if (!elements.zipForm.hidden) {
-    saveZip(event);
-  }
-});
+function bytesToBase64(bytes) {
+  return btoa(String.fromCharCode(...new Uint8Array(bytes)));
+}
 
-document.addEventListener("keydown", (event) => {
-  if (event.key.toLowerCase() === "n" && !event.metaKey && !event.ctrlKey && !event.altKey) {
-    const activeTag = document.activeElement?.tagName;
-    if (activeTag !== "INPUT" && activeTag !== "SELECT" && activeTag !== "TEXTAREA") {
-      state.focusDraftPeriod = "week";
-      focusRequestedDraft();
+function base64ToBytes(value) {
+  return Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
+}
+
+async function derivePasswordHash(password, salt) {
+  const passwordKey = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      hash: "SHA-256",
+      salt,
+      iterations: AUTH_ITERATIONS,
+    },
+    passwordKey,
+    256,
+  );
+
+  return bytesToBase64(bits);
+}
+
+async function createAuthRecord(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  return {
+    salt: bytesToBase64(salt),
+    hash: await derivePasswordHash(password, salt),
+    iterations: AUTH_ITERATIONS,
+  };
+}
+
+async function verifyPassword(password, record) {
+  const hash = await derivePasswordHash(password, base64ToBytes(record.salt));
+  return hash === record.hash;
+}
+
+function getAuthRecord() {
+  try {
+    return JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+function setAuthMode() {
+  const hasPassword = Boolean(getAuthRecord());
+  elements.authTitle.textContent = hasPassword ? "Password" : "Set password";
+  elements.authSubmit.textContent = hasPassword ? "Unlock" : "Save";
+  elements.authPassword.autocomplete = hasPassword ? "current-password" : "new-password";
+}
+
+function unlockApp() {
+  document.body.classList.remove("auth-pending");
+  initializeApp();
+}
+
+async function handleAuthSubmit(event) {
+  event.preventDefault();
+  const password = elements.authPassword.value;
+
+  if (!password) {
+    elements.authMessage.textContent = "Enter a password";
+    elements.authPassword.focus();
+    return;
+  }
+
+  try {
+    const record = getAuthRecord();
+
+    if (!record) {
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(await createAuthRecord(password)));
+      localStorage.setItem(AUTH_UNLOCKED_KEY, "true");
+      unlockApp();
+      return;
     }
+
+    if (await verifyPassword(password, record)) {
+      localStorage.setItem(AUTH_UNLOCKED_KEY, "true");
+      unlockApp();
+      return;
+    }
+
+    elements.authMessage.textContent = "Try again";
+    elements.authPassword.value = "";
+    elements.authPassword.focus();
+  } catch {
+    elements.authMessage.textContent = "Password protection needs this browser's crypto support";
+  }
+}
+
+let appInitialized = false;
+
+function initializeApp() {
+  if (appInitialized) {
+    return;
   }
 
-  if (event.key === "Escape") {
-    elements.zipForm.hidden = true;
-    elements.weatherStamp.hidden = false;
-  }
-});
+  appInitialized = true;
+  elements.railToggle.addEventListener("click", toggleRail);
+  elements.themeToggle.addEventListener("click", toggleTheme);
+  elements.weatherStamp.addEventListener("click", toggleZipForm);
+  elements.zipForm.addEventListener("submit", saveZip);
+  elements.zipInput.addEventListener("blur", (event) => {
+    if (!elements.zipForm.hidden) {
+      saveZip(event);
+    }
+  });
 
-render();
-fetchWeather();
+  document.addEventListener("keydown", (event) => {
+    if (event.key.toLowerCase() === "n" && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      const activeTag = document.activeElement?.tagName;
+      if (activeTag !== "INPUT" && activeTag !== "SELECT" && activeTag !== "TEXTAREA") {
+        state.focusDraftPeriod = "week";
+        focusRequestedDraft();
+      }
+    }
+
+    if (event.key === "Escape") {
+      elements.zipForm.hidden = true;
+      elements.weatherStamp.hidden = false;
+    }
+  });
+
+  render();
+  fetchWeather();
+}
+
+function initializeAuth() {
+  elements.root.dataset.theme = state.preferences.theme;
+
+  if (localStorage.getItem(AUTH_UNLOCKED_KEY) === "true" && getAuthRecord()) {
+    unlockApp();
+    return;
+  }
+
+  setAuthMode();
+  elements.authForm.addEventListener("submit", handleAuthSubmit);
+  elements.authPassword.focus();
+}
+
+initializeAuth();
