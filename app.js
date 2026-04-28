@@ -1,9 +1,9 @@
 const CATEGORIES = [
-  { id: "soft-services", label: "Soft Services" },
-  { id: "idea-farm", label: "Idea Farm" },
-  { id: "offhours", label: "Offhours" },
-  { id: "personal", label: "Personal" },
-  { id: "cooking", label: "Cooking" },
+  { id: "soft-services", label: "Soft Services", abbreviation: "SS" },
+  { id: "idea-farm", label: "Idea Farm", abbreviation: "IF" },
+  { id: "offhours", label: "Offhours", abbreviation: "OH" },
+  { id: "personal", label: "Personal", abbreviation: "PS" },
+  { id: "cooking", label: "Cooking", abbreviation: "CK" },
 ];
 
 const TASK_STORAGE_KEY = "personal-todos-v1";
@@ -130,6 +130,10 @@ function generateId() {
 
 function getCategoryLabel(categoryId) {
   return CATEGORIES.find((category) => category.id === categoryId)?.label ?? "Soft Services";
+}
+
+function getCategoryAbbreviation(categoryId) {
+  return CATEGORIES.find((category) => category.id === categoryId)?.abbreviation ?? "";
 }
 
 function getDefaultCategory() {
@@ -363,8 +367,9 @@ function renderTask(task, options = {}) {
   node.dataset.taskId = task.id;
   node.draggable = options.draggable ?? !task.completed;
   checkbox.checked = task.completed;
-  title.value = task.text;
+  title.value = options.showCategoryPrefix ? `${getCategoryAbbreviation(task.category)} ${task.text}` : task.text;
   title.dataset.taskId = task.id;
+  title.readOnly = Boolean(options.showCategoryPrefix);
 
   node.addEventListener("dragstart", (event) => {
     if (task.completed) {
@@ -382,10 +387,18 @@ function renderTask(task, options = {}) {
   });
   checkbox.addEventListener("change", () => toggleTask(task.id));
   title.addEventListener("input", () => {
+    if (title.readOnly) {
+      return;
+    }
+
     resizeTextArea(title);
     updateTaskText(task.id, title.value);
   });
   title.addEventListener("keydown", (event) => {
+    if (title.readOnly) {
+      return;
+    }
+
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       const remainingText = title.value.slice(title.selectionStart).trim();
@@ -505,11 +518,20 @@ function renderSection(title, tasks, options = {}) {
       renderTask(task, {
         dim: options.muted || task.completed,
         draggable: Boolean(options.dropPeriod) && !task.completed,
+        showCategoryPrefix: options.showCategoryPrefix,
       }),
     ),
   );
 
-  options.tailTasks?.forEach((task) => list.append(renderTask(task, { dim: true, draggable: false })));
+  options.tailTasks?.forEach((task) =>
+    list.append(
+      renderTask(task, {
+        dim: true,
+        draggable: false,
+        showCategoryPrefix: options.showCategoryPrefix,
+      }),
+    ),
+  );
 
   if (options.addable) {
     list.append(renderDraftTask(options.period));
@@ -535,6 +557,7 @@ function renderContent() {
       period: "week",
       dropPeriod: canAddInView ? "week" : null,
       tailTasks: completedWeekTasks,
+      showCategoryPrefix: state.view === "all-week",
     }),
   );
 
