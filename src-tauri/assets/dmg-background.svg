@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="660" height="400" viewBox="0 0 660 400">
+  <rect width="660" height="400" fill="#fbfdff"/>
+  <text x="330" y="72" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="26" font-weight="500" fill="#1f2527">Drag Todo to Applications</text>
+  <line x1="270" y1="178" x2="390" y2="178" stroke="#b9c0c4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M382 164 L398 178 L382 192" fill="none" stroke="#b9c0c4" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
