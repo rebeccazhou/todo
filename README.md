@@ -18,3 +18,23 @@ python3 -m http.server 8000
 ```
 
 Then open `http://127.0.0.1:8000`.
+
+## Mac app
+
+This repo includes a Tauri wrapper for building `Todo.app`.
+
+```bash
+npm install
+npm run tauri dev
+```
+
+Build a local app bundle and DMG:
+
+```bash
+npm run tauri build
+```
+
+Build output:
+
+- `src-tauri/target/release/bundle/macos/Todo.app`
+- `src-tauri/target/release/bundle/dmg/Todo_0.1.0_aarch64.dmg`

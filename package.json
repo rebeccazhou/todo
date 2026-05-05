@@ -1,0 +1,27 @@
+{
+  "name": "todo",
+  "version": "1.0.0",
+  "description": "A minimal personal checklist app with category tabs, this-week and later sections, completion archive, local weather, Supabase login, and shared Supabase storage.",
+  "private": true,
+  "main": "app.js",
+  "scripts": {
+    "dev": "python3 -m http.server 1420 --bind 127.0.0.1",
+    "build": "node scripts/build-static.mjs",
+    "tauri": "tauri"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rebeccazhou/todo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/rebeccazhou/todo/issues"
+  },
+  "homepage": "https://github.com/rebeccazhou/todo#readme",
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.0"
+  }
+}
