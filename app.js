@@ -60,6 +60,8 @@ const state = {
   focusDraftPeriod: null,
   focusTaskId: null,
   dragTaskId: null,
+  pointerDrag: null,
+  suppressToggleTaskId: null,
   weather: {
     status: "idle",
     temperature: null,
@@ -616,34 +618,42 @@ function renderTask(task, options = {}) {
   const node = elements.taskTemplate.content.firstElementChild.cloneNode(true);
   const checkbox = node.querySelector("input");
   const title = node.querySelector(".task-title");
+  const draggable = Boolean(options.draggable ?? !task.completed);
 
   node.classList.toggle("is-complete", task.completed);
   node.classList.toggle("is-dim", options.dim);
+  node.classList.toggle("is-draggable", draggable);
   node.dataset.taskId = task.id;
-  node.draggable = options.draggable ?? !task.completed;
+  node.draggable = false;
   checkbox.checked = task.completed;
   title.value = options.showCategoryPrefix ? `${getCategoryAbbreviation(task.category)} ${task.text}` : task.text;
   title.dataset.taskId = task.id;
   title.readOnly = Boolean(options.showCategoryPrefix);
 
-  node.addEventListener("dragstart", (event) => {
-    if (task.completed) {
+  if (draggable) {
+    node.addEventListener("pointerdown", (event) => startTaskPointerDrag(event, task, node));
+  }
+
+  node.addEventListener(
+    "click",
+    (event) => {
+      if (state.suppressToggleTaskId !== task.id) {
+        return;
+      }
+
       event.preventDefault();
+      event.stopImmediatePropagation();
+    },
+    true,
+  );
+  checkbox.addEventListener("change", () => {
+    if (state.suppressToggleTaskId === task.id) {
+      checkbox.checked = task.completed;
       return;
     }
 
-    state.dragTaskId = task.id;
-    node.classList.add("is-dragging");
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", task.id);
-    event.dataTransfer.setData("application/x-todo-id", task.id);
+    toggleTask(task.id);
   });
-  node.addEventListener("dragend", () => {
-    state.dragTaskId = null;
-    clearDropIndicators();
-    node.classList.remove("is-dragging");
-  });
-  checkbox.addEventListener("change", () => toggleTask(task.id));
   title.addEventListener("input", () => {
     if (title.readOnly) {
       return;
@@ -710,13 +720,25 @@ function renderDraftTask(period) {
 }
 
 function clearDropIndicators(root = elements.content) {
-  root.querySelectorAll(".is-drop-before, .is-drop-after").forEach((item) => {
-    item.classList.remove("is-drop-before", "is-drop-after");
+  root.querySelectorAll(".is-drop-target, .is-drop-before, .is-drop-after").forEach((item) => {
+    item.classList.remove("is-drop-target", "is-drop-before", "is-drop-after");
   });
 }
 
-function getDropPlacement(event, section, period, draggedTaskId) {
-  const targetNode = event.target.closest?.(".task[data-task-id]");
+function getDropSectionAtPoint(clientX, clientY) {
+  return document
+    .elementsFromPoint(clientX, clientY)
+    .find((element) => element.classList?.contains("task-section") && element.dataset.dropPeriod);
+}
+
+function getDropTaskAtPoint(clientX, clientY, section) {
+  return document
+    .elementsFromPoint(clientX, clientY)
+    .find((element) => element.classList?.contains("task") && element.dataset.taskId && section.contains(element));
+}
+
+function getDropPlacement(clientX, clientY, section, period, draggedTaskId) {
+  const targetNode = getDropTaskAtPoint(clientX, clientY, section);
   if (!targetNode || !section.contains(targetNode)) {
     return { position: "end" };
   }
@@ -737,56 +759,132 @@ function getDropPlacement(event, section, period, draggedTaskId) {
   }
 
   const rect = targetNode.getBoundingClientRect();
-  const position = event.clientY > rect.top + rect.height / 2 ? "after" : "before";
+  const position = clientY > rect.top + rect.height / 2 ? "after" : "before";
   return { position, targetNode, targetTaskId };
 }
 
-function showDropPlacement(event, section, period) {
-  clearDropIndicators(section);
-
+function showDropPlacement(clientX, clientY) {
+  clearDropIndicators();
   if (!state.dragTaskId) {
     return;
   }
 
-  const placement = getDropPlacement(event, section, period, state.dragTaskId);
+  const section = getDropSectionAtPoint(clientX, clientY);
+  if (!section) {
+    return;
+  }
+
+  const period = section.dataset.dropPeriod;
+  section.classList.add("is-drop-target");
+  const placement = getDropPlacement(clientX, clientY, section, period, state.dragTaskId);
   if (placement.position === "before" || placement.position === "after") {
     placement.targetNode.classList.add(`is-drop-${placement.position}`);
   }
 }
 
+function startTaskPointerDrag(event, task, node) {
+  if (event.button !== 0 || task.completed || event.metaKey || event.ctrlKey || event.altKey) {
+    return;
+  }
+
+  const title = event.target.closest?.(".task-title");
+  if (title && document.activeElement === title) {
+    return;
+  }
+
+  state.pointerDrag = {
+    taskId: task.id,
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    node,
+    active: false,
+  };
+
+  node.setPointerCapture?.(event.pointerId);
+  node.addEventListener("pointermove", moveTaskPointerDrag);
+  node.addEventListener("pointerup", finishTaskPointerDrag);
+  node.addEventListener("pointercancel", cancelTaskPointerDrag);
+}
+
+function activateTaskPointerDrag() {
+  const drag = state.pointerDrag;
+  if (!drag || drag.active) {
+    return;
+  }
+
+  drag.active = true;
+  state.dragTaskId = drag.taskId;
+  drag.node.classList.add("is-dragging");
+  elements.root.classList.add("is-task-dragging");
+}
+
+function moveTaskPointerDrag(event) {
+  const drag = state.pointerDrag;
+  if (!drag || event.pointerId !== drag.pointerId) {
+    return;
+  }
+
+  const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+  if (!drag.active && distance < 8) {
+    return;
+  }
+
+  event.preventDefault();
+  activateTaskPointerDrag();
+  showDropPlacement(event.clientX, event.clientY);
+}
+
+function finishTaskPointerDrag(event) {
+  const drag = state.pointerDrag;
+  if (!drag || event.pointerId !== drag.pointerId) {
+    return;
+  }
+
+  const wasActive = drag.active;
+  if (wasActive) {
+    event.preventDefault();
+    const section = getDropSectionAtPoint(event.clientX, event.clientY);
+    if (section) {
+      const period = section.dataset.dropPeriod;
+      const placement = getDropPlacement(event.clientX, event.clientY, section, period, drag.taskId);
+      moveTask(drag.taskId, period, placement);
+    }
+
+    state.suppressToggleTaskId = drag.taskId;
+    setTimeout(() => {
+      if (state.suppressToggleTaskId === drag.taskId) {
+        state.suppressToggleTaskId = null;
+      }
+    }, 80);
+  }
+
+  cleanupTaskPointerDrag();
+}
+
+function cancelTaskPointerDrag() {
+  cleanupTaskPointerDrag();
+}
+
+function cleanupTaskPointerDrag() {
+  const drag = state.pointerDrag;
+  if (!drag) {
+    return;
+  }
+
+  drag.node.removeEventListener("pointermove", moveTaskPointerDrag);
+  drag.node.removeEventListener("pointerup", finishTaskPointerDrag);
+  drag.node.removeEventListener("pointercancel", cancelTaskPointerDrag);
+  drag.node.releasePointerCapture?.(drag.pointerId);
+  drag.node.classList.remove("is-dragging");
+  elements.root.classList.remove("is-task-dragging");
+  state.pointerDrag = null;
+  state.dragTaskId = null;
+  clearDropIndicators();
+}
+
 function addDropTarget(section, period) {
   section.dataset.dropPeriod = period;
-
-  section.addEventListener("dragover", (event) => {
-    if (!event.dataTransfer.types.includes("application/x-todo-id")) {
-      return;
-    }
-
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-    section.classList.add("is-drop-target");
-    showDropPlacement(event, section, period);
-  });
-
-  section.addEventListener("dragleave", (event) => {
-    if (!section.contains(event.relatedTarget)) {
-      section.classList.remove("is-drop-target");
-      clearDropIndicators(section);
-    }
-  });
-
-  section.addEventListener("drop", (event) => {
-    const taskId = event.dataTransfer.getData("application/x-todo-id");
-    if (!taskId) {
-      return;
-    }
-
-    event.preventDefault();
-    const placement = getDropPlacement(event, section, period, taskId);
-    section.classList.remove("is-drop-target");
-    clearDropIndicators(section);
-    moveTask(taskId, period, placement);
-  });
 }
 
 function renderSection(title, tasks, options = {}) {
