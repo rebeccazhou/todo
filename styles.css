@@ -13,6 +13,15 @@
   --count-font-size: 19px;
   --tab-count-font-size: 19.35px;
   --field-height: 38px;
+  --app-line-height: 1.2;
+  --circle-size: 28px;
+  --task-row-height: 34px;
+  --task-column-gap: 14px;
+  --drop-indicator-left: 42px;
+  --content-gap: 64px;
+  --section-gap: 25px;
+  --week-section-gap: 19px;
+  --task-list-gap: 21px;
 }
 
 :root[data-theme="dark"] {
@@ -85,7 +94,7 @@ body:not(.auth-pending) .auth-gate {
   background: transparent;
   color: var(--text);
   font-size: var(--app-font-size);
-  line-height: 1.2;
+  line-height: var(--app-line-height);
   outline: none;
   padding: 0;
 }
@@ -97,7 +106,7 @@ body:not(.auth-pending) .auth-gate {
   color: var(--muted);
   cursor: pointer;
   font-size: var(--app-font-size);
-  line-height: 1.2;
+  line-height: var(--app-line-height);
   padding: 0;
   text-align: left;
 }
@@ -111,7 +120,7 @@ body:not(.auth-pending) .auth-gate {
 .auth-message {
   color: var(--muted);
   font-size: var(--app-font-size);
-  line-height: 1.2;
+  line-height: var(--app-line-height);
 }
 
 .app-shell {
@@ -143,8 +152,8 @@ body:not(.auth-pending) .auth-gate {
 }
 
 .weather-dot {
-  width: 28px;
-  height: 28px;
+  width: var(--circle-size);
+  height: var(--circle-size);
   border: 0;
   border-radius: 50%;
   background: var(--weather-accent);
@@ -247,7 +256,7 @@ body:not(.auth-pending) .auth-gate {
   color: var(--text);
   cursor: pointer;
   font-size: var(--app-font-size);
-  line-height: 1.2;
+  line-height: var(--app-line-height);
   letter-spacing: 0;
   padding: 0;
   text-align: left;
@@ -270,7 +279,7 @@ body:not(.auth-pending) .auth-gate {
 .zip-form span {
   color: var(--muted);
   font-size: var(--app-font-size);
-  line-height: 1.2;
+  line-height: var(--app-line-height);
 }
 
 .task-pane {
@@ -326,7 +335,7 @@ select,
   background: transparent;
   color: var(--text);
   font-size: var(--app-font-size);
-  line-height: 1.2;
+  line-height: var(--app-line-height);
   padding: 0;
 }
 
@@ -346,13 +355,13 @@ select {
 
 .content {
   display: grid;
-  gap: 64px;
+  gap: var(--content-gap);
   margin-top: 15px;
 }
 
 .task-section {
   display: grid;
-  gap: 25px;
+  gap: var(--section-gap);
 }
 
 .task-section.is-drop-target {
@@ -360,7 +369,7 @@ select {
 }
 
 .task-section.is-week {
-  gap: 19px;
+  gap: var(--week-section-gap);
 }
 
 .section-heading {
@@ -383,16 +392,16 @@ select {
 
 .task-list {
   display: grid;
-  gap: 21px;
+  gap: var(--task-list-gap);
 }
 
 .task {
   position: relative;
   display: grid;
-  grid-template-columns: 28px minmax(0, 408px);
+  grid-template-columns: var(--circle-size) minmax(0, 408px);
   align-items: start;
-  column-gap: 14px;
-  min-height: 34px;
+  column-gap: var(--task-column-gap);
+  min-height: var(--task-row-height);
 }
 
 .task.is-draggable {
@@ -413,7 +422,7 @@ select {
 .task.is-drop-after::after {
   content: "";
   position: absolute;
-  left: 42px;
+  left: var(--drop-indicator-left);
   right: 0;
   height: 2px;
   border-radius: 999px;
@@ -440,15 +449,15 @@ select {
 .task-check {
   position: relative;
   display: block;
-  width: 28px;
-  height: 34px;
+  width: var(--circle-size);
+  height: var(--task-row-height);
 }
 
 .task-check input {
   position: absolute;
   inset: 0;
-  width: 28px;
-  height: 28px;
+  width: var(--circle-size);
+  height: var(--circle-size);
   margin: 0;
   opacity: 0;
   cursor: pointer;
@@ -467,8 +476,8 @@ select {
 
 .checkmark {
   display: block;
-  width: 28px;
-  height: 28px;
+  width: var(--circle-size);
+  height: var(--circle-size);
   border: 2px solid var(--line);
   border-radius: 50%;
 }
@@ -489,7 +498,7 @@ select {
   color: inherit;
   font-size: var(--app-font-size);
   font-weight: 400;
-  line-height: 1.2;
+  line-height: var(--app-line-height);
   letter-spacing: 0;
   outline: none;
   overflow: hidden;
@@ -520,7 +529,7 @@ select {
   color: var(--text);
   font-size: var(--app-font-size);
   font-weight: 400;
-  line-height: 1.2;
+  line-height: var(--app-line-height);
   letter-spacing: 0;
   overflow: hidden;
   outline: none;
@@ -538,6 +547,15 @@ select {
     --count-font-size: 15.2px;
     --tab-count-font-size: 15.5px;
     --field-height: 31px;
+    --app-line-height: 1.2;
+    --circle-size: 21px;
+    --task-row-height: 26px;
+    --task-column-gap: 11px;
+    --drop-indicator-left: 32px;
+    --content-gap: 10px;
+    --section-gap: 12.5px;
+    --week-section-gap: 9.5px;
+    --task-list-gap: 10.5px;
   }
 
   .auth-gate {
@@ -606,7 +624,15 @@ select {
   }
 
   .task {
-    grid-template-columns: 28px minmax(0, 1fr);
+    grid-template-columns: var(--circle-size) minmax(0, 1fr);
+  }
+
+  .pane-header {
+    min-height: 32px;
+  }
+
+  .section-heading {
+    min-height: 29px;
   }
 
   .task-title,
