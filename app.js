@@ -59,6 +59,7 @@ const state = {
   isSyncing: false,
   focusDraftPeriod: null,
   focusTaskId: null,
+  dragTaskId: null,
   weather: {
     status: "idle",
     temperature: null,
@@ -465,15 +466,63 @@ function updateTaskText(taskId, text) {
   saveTasks();
 }
 
-function moveTaskToPeriod(taskId, period) {
+function findLastTaskIndex(tasks, predicate) {
+  for (let index = tasks.length - 1; index >= 0; index -= 1) {
+    if (predicate(tasks[index])) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function moveTask(taskId, period, placement = {}) {
   const task = state.tasks.find((item) => item.id === taskId);
-  if (!task || task.completed || task.period === period) {
+  if (!task || task.completed || placement.position === "self") {
     return;
   }
 
-  state.tasks = state.tasks.map((item) =>
-    item.id === taskId ? { ...item, period } : item,
-  );
+  const movedTask = { ...task, period };
+  const remainingTasks = state.tasks.filter((item) => item.id !== taskId);
+  let insertIndex = remainingTasks.length;
+
+  if (placement.targetTaskId && placement.targetTaskId !== taskId) {
+    const targetIndex = remainingTasks.findIndex((item) => item.id === placement.targetTaskId);
+    if (targetIndex >= 0) {
+      insertIndex = placement.position === "after" ? targetIndex + 1 : targetIndex;
+    }
+  } else {
+    const targetGroupIndex = findLastTaskIndex(
+      remainingTasks,
+      (item) => item.category === movedTask.category && item.period === period && !item.completed,
+    );
+    const categoryIndex = findLastTaskIndex(
+      remainingTasks,
+      (item) => item.category === movedTask.category,
+    );
+    insertIndex = targetGroupIndex >= 0
+      ? targetGroupIndex + 1
+      : categoryIndex >= 0
+        ? categoryIndex + 1
+        : remainingTasks.length;
+  }
+
+  const nextTasks = [
+    ...remainingTasks.slice(0, insertIndex),
+    movedTask,
+    ...remainingTasks.slice(insertIndex),
+  ];
+
+  const changed = nextTasks.some((item, index) => {
+    const previous = state.tasks[index];
+    return item.id !== previous?.id || item.period !== previous?.period;
+  });
+
+  if (!changed) {
+    return;
+  }
+
+  state.tasks = nextTasks;
   saveTasks();
   render();
 }
@@ -583,12 +632,15 @@ function renderTask(task, options = {}) {
       return;
     }
 
+    state.dragTaskId = task.id;
     node.classList.add("is-dragging");
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", task.id);
     event.dataTransfer.setData("application/x-todo-id", task.id);
   });
   node.addEventListener("dragend", () => {
+    state.dragTaskId = null;
+    clearDropIndicators();
     node.classList.remove("is-dragging");
   });
   checkbox.addEventListener("change", () => toggleTask(task.id));
@@ -657,6 +709,51 @@ function renderDraftTask(period) {
   return node;
 }
 
+function clearDropIndicators(root = elements.content) {
+  root.querySelectorAll(".is-drop-before, .is-drop-after").forEach((item) => {
+    item.classList.remove("is-drop-before", "is-drop-after");
+  });
+}
+
+function getDropPlacement(event, section, period, draggedTaskId) {
+  const targetNode = event.target.closest?.(".task[data-task-id]");
+  if (!targetNode || !section.contains(targetNode)) {
+    return { position: "end" };
+  }
+
+  const targetTaskId = targetNode.dataset.taskId;
+  if (targetTaskId === draggedTaskId) {
+    return { position: "self", targetNode, targetTaskId };
+  }
+
+  const targetTask = state.tasks.find((item) => item.id === targetTaskId);
+  if (!targetTask || targetTask.completed || targetTask.period !== period) {
+    return { position: "end" };
+  }
+
+  const draggedTask = state.tasks.find((item) => item.id === draggedTaskId);
+  if (!draggedTask || targetTask.category !== draggedTask.category) {
+    return { position: "end" };
+  }
+
+  const rect = targetNode.getBoundingClientRect();
+  const position = event.clientY > rect.top + rect.height / 2 ? "after" : "before";
+  return { position, targetNode, targetTaskId };
+}
+
+function showDropPlacement(event, section, period) {
+  clearDropIndicators(section);
+
+  if (!state.dragTaskId) {
+    return;
+  }
+
+  const placement = getDropPlacement(event, section, period, state.dragTaskId);
+  if (placement.position === "before" || placement.position === "after") {
+    placement.targetNode.classList.add(`is-drop-${placement.position}`);
+  }
+}
+
 function addDropTarget(section, period) {
   section.dataset.dropPeriod = period;
 
@@ -668,11 +765,13 @@ function addDropTarget(section, period) {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
     section.classList.add("is-drop-target");
+    showDropPlacement(event, section, period);
   });
 
   section.addEventListener("dragleave", (event) => {
     if (!section.contains(event.relatedTarget)) {
       section.classList.remove("is-drop-target");
+      clearDropIndicators(section);
     }
   });
 
@@ -683,8 +782,10 @@ function addDropTarget(section, period) {
     }
 
     event.preventDefault();
+    const placement = getDropPlacement(event, section, period, taskId);
     section.classList.remove("is-drop-target");
-    moveTaskToPeriod(taskId, period);
+    clearDropIndicators(section);
+    moveTask(taskId, period, placement);
   });
 }
 
