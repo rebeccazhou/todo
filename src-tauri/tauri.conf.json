@@ -27,6 +27,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": "all",
     "icon": [
       "icons/32x32.png",
@@ -54,6 +55,14 @@
     },
     "android": {
       "debugApplicationIdSuffix": ".debug"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFBNTQwNEY2MDdDQzJFQkEKUldTNkxzd0g5Z1JVR2tSeThTbFYyejRFMzU4MmpNdG8reURIR3d0cmNXYytkT1U5TnZ3T3B4RkIK",
+      "endpoints": [
+        "https://github.com/rebeccazhou/todo/releases/latest/download/latest.json"
+      ]
     }
   }
 }
