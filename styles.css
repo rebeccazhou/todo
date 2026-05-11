@@ -463,17 +463,6 @@ select {
   cursor: pointer;
 }
 
-.task.is-draggable .task-check,
-.task.is-draggable .task-check input {
-  cursor: grab;
-  touch-action: none;
-}
-
-.task.is-dragging .task-check,
-.task.is-dragging .task-check input {
-  cursor: grabbing;
-}
-
 .checkmark {
   display: block;
   width: var(--circle-size);

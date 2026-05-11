@@ -792,6 +792,10 @@ function startTaskPointerDrag(event, task, node) {
     return;
   }
 
+  if (event.target.closest?.(".task-check")) {
+    return;
+  }
+
   state.pointerDrag = {
     taskId: task.id,
     pointerId: event.pointerId,
