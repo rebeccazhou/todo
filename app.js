@@ -1,4 +1,4 @@
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   { id: "soft-services", label: "Soft Services", abbreviation: "SS" },
   { id: "idea-farm", label: "Idea Farm", abbreviation: "IF" },
   { id: "sephora", label: "Sephora", abbreviation: "SP" },
@@ -12,6 +12,7 @@ const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Gb7Nd34Ndh0wQxOK2BuKmw_1WZUrAX2
 const TASK_STORAGE_KEY = "personal-todos-v1";
 const PREF_STORAGE_KEY = "personal-todos-preferences-v1";
 const LOGIN_NAME_STORAGE_KEY = "personal-todos-login-name-v1";
+const CATEGORY_STORAGE_KEY = "personal-todos-categories-v1";
 const DEFAULT_ZIP = "10001";
 const MOBILE_LAYOUT_QUERY = window.matchMedia("(max-width: 760px)");
 const supabaseClient = globalThis.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) ?? null;
@@ -53,6 +54,7 @@ const WEATHER_CODES = {
 const state = {
   view: "soft-services",
   tasks: loadTasks(),
+  categories: loadCategories(),
   preferences: loadPreferences(),
   user: null,
   syncTimer: null,
@@ -83,6 +85,11 @@ const elements = {
   viewTabs: document.querySelector("#viewTabs"),
   railToggle: document.querySelector("#railToggle"),
   themeToggle: document.querySelector("#themeToggle"),
+  settingsToggle: document.querySelector("#settingsToggle"),
+  settingsDialog: document.querySelector("#settingsDialog"),
+  settingsClose: document.querySelector("#settingsClose"),
+  categoryList: document.querySelector("#categoryList"),
+  addCategory: document.querySelector("#addCategory"),
   content: document.querySelector("#content"),
   weatherStamp: document.querySelector("#weatherStamp"),
   zipForm: document.querySelector("#zipForm"),
@@ -90,6 +97,32 @@ const elements = {
   taskTemplate: document.querySelector("#taskTemplate"),
   draftTemplate: document.querySelector("#draftTemplate"),
 };
+
+function normalizeCategory(category, index) {
+  const label = String(category?.label ?? "").trim() || `Category ${index + 1}`;
+  return {
+    id: String(category?.id ?? generateId()),
+    label,
+    abbreviation: String(category?.abbreviation ?? "").trim().slice(0, 3).toUpperCase(),
+  };
+}
+
+function loadCategories() {
+  try {
+    const savedCategories = JSON.parse(localStorage.getItem(CATEGORY_STORAGE_KEY));
+    if (Array.isArray(savedCategories) && savedCategories.length > 0) {
+      return savedCategories.map(normalizeCategory);
+    }
+  } catch {
+    // Fall back to the original category set.
+  }
+
+  return DEFAULT_CATEGORIES.map((category) => ({ ...category }));
+}
+
+function saveCategories() {
+  localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(state.categories));
+}
 
 function loadTasks() {
   try {
@@ -151,15 +184,15 @@ function generateId() {
 }
 
 function getCategoryLabel(categoryId) {
-  return CATEGORIES.find((category) => category.id === categoryId)?.label ?? "Soft Services";
+  return state.categories.find((category) => category.id === categoryId)?.label ?? state.categories[0].label;
 }
 
 function getCategoryAbbreviation(categoryId) {
-  return CATEGORIES.find((category) => category.id === categoryId)?.abbreviation ?? "";
+  return state.categories.find((category) => category.id === categoryId)?.abbreviation ?? "";
 }
 
 function getDefaultCategory() {
-  return state.view === "all-week" ? "soft-services" : state.view;
+  return state.view === "all-week" ? state.categories[0].id : state.view;
 }
 
 function getViewLabel(view = state.view) {
@@ -588,9 +621,7 @@ function isMobileLayout() {
 }
 
 function renderTabs() {
-  const allTabs = [...CATEGORIES, { id: "all-week", label: "This Week" }];
-  const activeTab = allTabs.find((tab) => tab.id === state.view) ?? allTabs[0];
-  const tabs = [activeTab, ...allTabs.filter((tab) => tab.id !== activeTab.id)];
+  const tabs = [...state.categories, { id: "all-week", label: "This Week" }];
 
   elements.viewTabs.replaceChildren();
 
@@ -612,6 +643,118 @@ function renderTabs() {
     button.addEventListener("click", () => setView(tab.id));
     elements.viewTabs.append(button);
   });
+}
+
+function moveCategory(categoryId, direction) {
+  const index = state.categories.findIndex((category) => category.id === categoryId);
+  const nextIndex = index + direction;
+  if (index < 0 || nextIndex < 0 || nextIndex >= state.categories.length) return;
+
+  const categories = [...state.categories];
+  [categories[index], categories[nextIndex]] = [categories[nextIndex], categories[index]];
+  state.categories = categories;
+  saveCategories();
+  renderTabs();
+  renderCategorySettings();
+}
+
+function updateCategory(categoryId, changes) {
+  state.categories = state.categories.map((category) =>
+    category.id === categoryId ? { ...category, ...changes } : category,
+  );
+  saveCategories();
+  renderTabs();
+  elements.viewContext.textContent = state.view === "all-week" ? "" : getViewLabel();
+}
+
+function removeCategory(categoryId) {
+  if (state.categories.length === 1) return;
+
+  const fallbackCategory = state.categories.find((category) => category.id !== categoryId);
+  state.categories = state.categories.filter((category) => category.id !== categoryId);
+  state.tasks = state.tasks.map((task) =>
+    task.category === categoryId ? { ...task, category: fallbackCategory.id } : task,
+  );
+  if (state.view === categoryId) state.view = fallbackCategory.id;
+  saveCategories();
+  saveTasks();
+  render();
+  renderCategorySettings();
+}
+
+function addCategory() {
+  const category = { id: `category-${generateId()}`, label: "New Category", abbreviation: "NC" };
+  state.categories = [...state.categories, category];
+  saveCategories();
+  renderTabs();
+  renderCategorySettings();
+  requestAnimationFrame(() => {
+    const input = elements.categoryList.querySelector(`[data-category-id="${category.id}"] .category-name`);
+    input?.focus();
+    input?.select();
+  });
+}
+
+function renderCategorySettings() {
+  elements.categoryList.replaceChildren();
+  state.categories.forEach((category, index) => {
+    const row = document.createElement("div");
+    row.className = "category-setting";
+    row.dataset.categoryId = category.id;
+
+    const name = document.createElement("input");
+    name.className = "category-name";
+    name.value = category.label;
+    name.setAttribute("aria-label", "Category name");
+    name.addEventListener("change", () => {
+      const label = name.value.trim();
+      if (!label) return void (name.value = category.label);
+      updateCategory(category.id, { label });
+    });
+
+    const abbreviation = document.createElement("input");
+    abbreviation.className = "category-abbreviation";
+    abbreviation.value = category.abbreviation;
+    abbreviation.maxLength = 3;
+    abbreviation.setAttribute("aria-label", "Category abbreviation");
+    abbreviation.addEventListener("input", () => { abbreviation.value = abbreviation.value.toUpperCase(); });
+    abbreviation.addEventListener("change", () => {
+      updateCategory(category.id, { abbreviation: abbreviation.value.trim().toUpperCase() });
+    });
+
+    const controls = document.createElement("div");
+    controls.className = "category-controls";
+    [["↑", -1, index === 0, "Move category up"], ["↓", 1, index === state.categories.length - 1, "Move category down"]]
+      .forEach(([label, direction, disabled, ariaLabel]) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = label;
+        button.disabled = disabled;
+        button.setAttribute("aria-label", ariaLabel);
+        button.addEventListener("click", () => moveCategory(category.id, direction));
+        controls.append(button);
+      });
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "category-remove";
+    remove.textContent = "×";
+    remove.disabled = state.categories.length === 1;
+    remove.setAttribute("aria-label", `Remove ${category.label}`);
+    remove.addEventListener("click", () => removeCategory(category.id));
+    controls.append(remove);
+    row.append(name, abbreviation, controls);
+    elements.categoryList.append(row);
+  });
+}
+
+function openSettings() {
+  renderCategorySettings();
+  elements.settingsDialog.showModal();
+}
+
+function closeSettings() {
+  elements.settingsDialog.close();
 }
 
 function renderTask(task, options = {}) {
@@ -1226,6 +1369,12 @@ function initializeApp() {
   appInitialized = true;
   elements.railToggle.addEventListener("click", toggleRail);
   elements.themeToggle.addEventListener("click", toggleTheme);
+  elements.settingsToggle.addEventListener("click", openSettings);
+  elements.settingsClose.addEventListener("click", closeSettings);
+  elements.addCategory.addEventListener("click", addCategory);
+  elements.settingsDialog.addEventListener("click", (event) => {
+    if (event.target === elements.settingsDialog) closeSettings();
+  });
   elements.weatherStamp.addEventListener("click", toggleZipForm);
   elements.zipForm.addEventListener("submit", saveZip);
   MOBILE_LAYOUT_QUERY.addEventListener("change", applyPreferences);

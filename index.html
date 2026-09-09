@@ -43,6 +43,7 @@
       </aside>
 
       <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle dark mode"></button>
+      <button id="settingsToggle" class="settings-toggle" type="button" aria-label="Edit categories"></button>
 
       <section class="task-pane" aria-live="polite">
         <header class="pane-header">
@@ -55,6 +56,21 @@
         <div id="content" class="content"></div>
       </section>
     </main>
+
+    <dialog id="settingsDialog" class="settings-dialog" aria-labelledby="settingsTitle">
+      <div class="settings-panel">
+        <header class="settings-header">
+          <h2 id="settingsTitle">Categories</h2>
+          <button id="settingsClose" type="button" aria-label="Close settings">×</button>
+        </header>
+        <p class="settings-hint">Edit names and abbreviations. Use the arrows to change the sidebar order.</p>
+        <div class="category-labels" aria-hidden="true">
+          <span>Name</span><span>Short</span>
+        </div>
+        <div id="categoryList" class="category-list"></div>
+        <button id="addCategory" class="add-category" type="button">+ Add category</button>
+      </div>
+    </dialog>
 
     <template id="taskTemplate">
       <article class="task">

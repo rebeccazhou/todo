@@ -190,6 +190,47 @@ body:not(.auth-pending) .auth-gate {
   content: none;
 }
 
+.settings-toggle {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  width: 100px;
+  height: 100px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.settings-toggle:hover,
+.settings-toggle:focus-visible { outline: none; }
+.settings-dialog { width: min(620px, calc(100vw - 32px)); max-height: min(720px, calc(100vh - 48px)); border: 0; background: var(--bg); color: var(--text); padding: 0; }
+.settings-dialog::backdrop { background: rgba(0, 0, 0, 0.28); }
+.settings-panel { padding: 32px; }
+.settings-header { display: flex; align-items: center; justify-content: space-between; }
+.settings-header h2 { margin: 0; font-size: 30px; font-weight: 400; }
+.settings-header button,
+.category-controls button,
+.add-category { border: 0; background: transparent; color: var(--muted-strong); cursor: pointer; padding: 0; }
+.settings-header button { font-size: 32px; line-height: 1; }
+.settings-hint { margin: 12px 0 28px; color: var(--muted-strong); font-size: 15px; line-height: 1.4; }
+.category-labels,
+.category-setting { display: grid; grid-template-columns: minmax(0, 1fr) 72px 104px; gap: 12px; align-items: center; }
+.category-labels { margin-bottom: 8px; color: var(--muted-strong); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+.category-list { display: grid; gap: 8px; }
+.category-setting input { width: 100%; height: 40px; border-bottom: 1px solid var(--done-dot); font-size: 18px; }
+.category-abbreviation { text-align: center; }
+.category-controls { display: flex; justify-content: flex-end; gap: 13px; }
+.category-controls button { font-size: 20px; }
+.category-controls button:hover:not(:disabled),
+.settings-header button:hover,
+.add-category:hover { color: var(--text); }
+.category-controls button:disabled { opacity: 0.2; cursor: default; }
+.category-remove { margin-left: 4px; }
+.add-category { margin-top: 24px; font-size: 18px; }
+
 .zip-form :focus-visible {
   outline: none;
   outline-offset: 4px;
@@ -628,4 +669,8 @@ select {
   .draft-input {
     width: 100%;
   }
+
+  .settings-panel { padding: 24px 18px; }
+  .category-labels,
+  .category-setting { grid-template-columns: minmax(0, 1fr) 56px 92px; gap: 8px; }
 }
