@@ -931,10 +931,6 @@ function startTaskPointerDrag(event, task, node) {
   }
 
   const title = event.target.closest?.(".task-title");
-  if (title && document.activeElement === title) {
-    return;
-  }
-
   if (event.target.closest?.(".task-check")) {
     return;
   }
@@ -945,6 +941,7 @@ function startTaskPointerDrag(event, task, node) {
     startX: event.clientX,
     startY: event.clientY,
     node,
+    title,
     active: false,
   };
 
@@ -959,6 +956,16 @@ function activateTaskPointerDrag() {
   if (!drag || drag.active) {
     return;
   }
+
+  // A task title is an editable textarea, so the browser may begin selecting
+  // its text before the pointer has moved far enough to count as a drag. Once
+  // the drag is intentional, collapse that selection and remove its caret.
+  if (drag.title) {
+    const selectionEnd = drag.title.selectionEnd ?? drag.title.value.length;
+    drag.title.setSelectionRange(selectionEnd, selectionEnd);
+    drag.title.blur();
+  }
+  window.getSelection()?.removeAllRanges();
 
   drag.active = true;
   state.dragTaskId = drag.taskId;

@@ -449,13 +449,23 @@ select {
   cursor: grab;
 }
 
+.task.is-draggable .task-title:not(:focus) {
+  cursor: grab;
+}
+
 .task.is-dragging {
   opacity: 0.28;
   cursor: grabbing;
 }
 
+.task.is-dragging .task-title {
+  cursor: grabbing;
+  caret-color: transparent;
+}
+
 :root.is-task-dragging,
 :root.is-task-dragging * {
+  -webkit-user-select: none;
   user-select: none;
 }
 
